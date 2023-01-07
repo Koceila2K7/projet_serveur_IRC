@@ -8,8 +8,6 @@ Nous avons mis en place deux version du projet :
 
 * La version avec un serveur central :
 
-![](./img/monoserver.png)
 * La version en P2P :
 
-![Peer to peer](./img/p2p.png)
 
