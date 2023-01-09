@@ -118,30 +118,34 @@ def receive_message(conn: socket.socket,
                          args=(split_data, conn)).start()
 
     if cmd == CMD.JOIN.value:  # /join <canal> [clé]
-        if len(split_data) >= 2:
-            channel = split_data[1]
-            cle = None  # par defaut si channel n'as pas de clé
-            if len(split_data) >= 3:  # on ignore les autres arguments s'ils existent dans ce cas
-                cle = split_data[2]
+        def join_channel(split_data):
+            if len(split_data) >= 2:
+                channel = split_data[1]
+                cle = None  # par defaut si channel n'as pas de clé
+                if len(split_data) >= 3:  # on ignore les autres arguments s'ils existent dans ce cas
+                    cle = split_data[2]
 
-            with nickname_lock:  # nickname
-                my_nickname = find_user_nickname_by_conx_id(
-                    id=connexion_id, nickname_dict=nickname_map)
+                with nickname_lock:  # nickname
+                    my_nickname = find_user_nickname_by_conx_id(
+                        id=connexion_id, nickname_dict=nickname_map)
 
-            with channels_lock:
-                if channel not in channels_map:  # channel n'existe pas
-                    # on le crée et on ajoute le user et on met à jour la clé
-                    channels_map[channel] = [my_nickname]
-                    if cle:
-                        channels_keys[channel] = cle
+                with channels_lock:
+                    if channel not in channels_map:  # channel n'existe pas
+                        # on le crée et on ajoute le user et on met à jour la clé
+                        channels_map[channel] = [my_nickname]
+                        if cle:
+                            channels_keys[channel] = cle
 
-                # si channel existe, on vérifie la clé, si elle correspond on ajoute le user.
-                else:
-                    if cle == channels_keys.get(channel):
-                        channels_map[channel] = channels_map.get(
-                            channel).append(my_nickname)
-                    elif verbose:
-                        print(f"invalid key for channel {channel}")
+                    # si channel existe, on vérifie la clé, si elle correspond on ajoute le user.
+                    else:
+                        if cle == channels_keys.get(channel):
+                            channels_map[channel] = channels_map.get(
+                                channel).append(my_nickname)
+                        elif verbose:
+                            print(f"invalid key for channel {channel}")
+
+        threading.Thread(target=join_channel,
+                         args=(split_data)).start()
 
     if (verbose):
         print("msg reçu du client : ", data)
