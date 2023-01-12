@@ -15,6 +15,9 @@ channels_lock = threading.Lock()
 channels_keys: dict[str, str] = {}  # {chan_id: key, ...}
 # if channel dont have key or dont exist, channels_keys.get(channel) returns None
 
+away_messages = {}  # {nickname: msg, nickname: msg,...}
+away_messages_lock = threading.Lock()
+
 # ipv4 AF_INET
 # a SOCK STREAM (pour un mode connecte, soit ´ TCP) ou
 # SOCK DGRAM (pour un non connecte, soit ´ UDP).
@@ -136,16 +139,66 @@ def receive_message(conn: socket.socket,
                         if cle:
                             channels_keys[channel] = cle
 
-                    # si channel existe, on vérifie la clé, si elle correspond on ajoute le user.
+                    # si channel existe, on vérifie la clé
+                    # si elle correspond on ajoute le user, on le retire aussi des autres channels #
                     else:
                         if cle == channels_keys.get(channel):
+                            # on le retire s'il existe dans d'autres channels
+                            my_channel_name = find_user_channel(
+                                my_nickname, channel_dict=channels_map)
+                            if my_channel_name is not None:
+                                channels_map.get(my_channel_name).remove(
+                                    my_nickname)
+
+                            # on l'ajoute dans tous les cas au channel
                             channels_map[channel] = channels_map.get(
                                 channel).append(my_nickname)
+                            if verbose:
+                                print(
+                                    f"user {my_nickname} \
+                                    added to channel {channel}")
                         elif verbose:
                             print(f"invalid key for channel {channel}")
 
         threading.Thread(target=join_channel,
                          args=(split_data)).start()
+
+    if cmd == CMD.LIST.value:
+        def list_channels():
+            with channels_lock:
+                msg = str(channels_map.keys())
+                return msg.encode()
+        # vérifier si le thread a accès aux variables
+        threading.Thread(target=lambda: conn.send(list_channels())).start()
+
+    if cmd == CMD.AWAY.value:
+        # Signale son absence quand on nous envoie un message en privé
+        def away_msg(splited_data: list[str], conn: socket.socket):
+            # à voir si on renvoi une response à cette commande
+            if len(splited_data) > 1:
+                msg = splited_data[1]
+                with nickname_lock:
+                    my_nickname = find_user_nickname_by_conx_id(
+                        id=connexion_id, nickname_dict=nickname_map)
+                with away_messages_lock:
+                    away_messages[my_nickname] = msg
+                if verbose:
+                    print(f"away message {msg} added to user {my_nickname}")
+
+        threading.Thread(target=away_msg,
+                         args=(split_data, conn)).start()
+
+    if cmd == CMD.MSG.value:
+        def send_msg(splited_data: list[str], conn: socket.socket):
+            """"
+            /msg [canal|nick] message Pour envoyer un message à un user
+            ou sur un canal (où on est pr esent ou pas).
+            Les arguments canal ou nick sont optionnels !
+            donc si j'envoi juste un msg sans préciser user/canal,
+            le msg sera envoyé à mon canal
+            - doit gérer aussi les away messages
+            """
+            pass
 
     if (verbose):
         print("msg reçu du client : ", data)
