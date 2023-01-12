@@ -58,6 +58,13 @@ def find_user_nickname_by_conx_id(id: str,
     return None
 
 
+def send_message(msg: str, conn: socket.socket):
+    """
+    fonction à surpprimer ou a modifier si on l'utilise ?
+    """
+    conn.send(msg.encode())
+
+
 def receive_message(conn: socket.socket,
                     connexion_id: str,
                     msg_size: int = 1024,
@@ -189,16 +196,37 @@ def receive_message(conn: socket.socket,
                          args=(split_data, conn)).start()
 
     if cmd == CMD.MSG.value:
-        def send_msg(splited_data: list[str], conn: socket.socket):
+        def send_msg(split_data: list[str], conn: socket.socket):
             """"
             /msg [canal|nick] message Pour envoyer un message à un user
             ou sur un canal (où on est pr esent ou pas).
             Les arguments canal ou nick sont optionnels !
             donc si j'envoi juste un msg sans préciser user/canal,
             le msg sera envoyé à mon canal
-            - doit gérer aussi les away messages
+            - doit gérer aussi les away messages ? ou ce sera géré par send_message ?
             """
-            pass
+            if len(split_data) in [2, 3]:  # sinon on fait rien
+
+                msg = split_data[2] if len(split_data) == 3 else split_data[1]
+                chan_or_nick = split_data[1] if len(split_data) == 3 else None
+
+                with nickname_lock:
+                    my_nickname = find_user_nickname_by_conx_id(
+                        id=connexion_id, nickname_dict=nickname_map)
+
+                with channels_lock:
+                    # si pas de canal/nickname specifié
+                    if chan_or_nick is None:
+                        channel = find_user_channel(
+                            my_nickname, channel_dict=channels_map)
+
+                    # canal specifié
+                    elif chan_or_nick in channels_map:
+                        channel = chan_or_nick
+
+                    # nickname specifié
+                    elif chan_or_nick in nickname_map:
+                        nickname = chan_or_nick
 
     if (verbose):
         print("msg reçu du client : ", data)
@@ -233,15 +261,6 @@ def accept_connexions(max_connexions: int = 10):
         else:  # decline the new connexion
             # verification chaque 3 secondes si des places se sont libérées
             time.sleep(3)
-
-
-def send_message(conn):
-    """
-    fonction à surpprimer
-    """
-    for _ in range(3):
-        message = input("entrez un msg à envoyer au client : ")
-        conn.send(message.encode())
 
 
 thread_connex = threading.Thread(target=accept_connexions)
