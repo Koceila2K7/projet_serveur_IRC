@@ -11,7 +11,7 @@ nickname_map = {}  # {nickname: id, ...}
 nickname_lock = threading.Lock()
 
 channels_map: Dict[str, list] = {}  # {chan_id: [nickname, nickname...], ...}
-channels_lock = threading.Lock()
+channels_lock = threading.RLock()
 
 channels_keys: Dict[str, str] = {}  # {chan_id: key, ...}
 # if channel dont have key or dont exist, channels_keys.get(channel) returns None
@@ -150,6 +150,15 @@ def receive_message(conn: socket.socket,
             nickname = split_data[1]
             with nickname_lock:
                 nickname_map[nickname] = connexion_id
+                print(f"nickname_map[{nickname}] = {connexion_id}")
+
+        # DEBUT FUNCTION
+        if cmd == "/debug":
+            print("connex_map: ", connex_map, end="\n\n")
+            print("nickname_map: ", nickname_map, end="\n\n")
+            print("channels_map: ", channels_map, end="\n\n")
+            print("channels_keys: ", channels_keys, end="\n\n")
+            print("away_messages: ", away_messages, end="\n\n")
 
         if cmd == CMD.HELP.value:
             threading.Thread(target=lambda: conn.send(
@@ -202,7 +211,8 @@ def receive_message(conn: socket.socket,
                              args=(split_data, conn)).start()
 
         if cmd == CMD.JOIN.value:  # /join <canal> [clé]
-            def join_channel(split_data):
+            def join_channel(split_data: list, marche: str = ""):
+                my_nickname = None
                 if len(split_data) >= 2:
                     channel = split_data[1]
                     cle = None  # par defaut si channel n'as pas de clé
@@ -212,11 +222,20 @@ def receive_message(conn: socket.socket,
                     with nickname_lock:  # nickname
                         my_nickname = find_user_nickname_by_conx_id(
                             id=connexion_id, nickname_dict=nickname_map)
-
+                    print("-- channels_lock")
                     with channels_lock:
                         if channel not in channels_map:  # channel n'existe pas
+                            # on le retire s'il existe dans d'autres channels
+                            my_channel_name = find_user_channel(
+                                my_nickname, channel_dict=channels_map)
+                            if my_channel_name is not None:
+                                channels_map.get(my_channel_name).remove(
+                                    my_nickname)
+
                             # on le crée et on ajoute le user et on met à jour la clé
                             channels_map[channel] = [my_nickname]
+
+                            # cle du channel si doonnée
                             if cle:
                                 channels_keys[channel] = cle
 
@@ -234,15 +253,18 @@ def receive_message(conn: socket.socket,
                                 # on l'ajoute dans tous les cas au channel
                                 channels_map[channel] = channels_map.get(
                                     channel).append(my_nickname)
-                                if verbose:
-                                    print(
-                                        f"user {my_nickname} \
-                                        added to channel {channel}")
+
                             elif verbose:
                                 print(f"invalid key for channel {channel}")
+                    if verbose:
+                        print(
+                            f"user {my_nickname} \
+                            added to channel {channel}")
+                    print("-- channels_lock fin")
 
+            print("split data = ", split_data)
             threading.Thread(target=join_channel,
-                             args=(split_data)).start()
+                             args=(split_data, "")).start()
 
         if cmd == CMD.LIST.value:
             def list_channels(channels_map, channels_lock):
