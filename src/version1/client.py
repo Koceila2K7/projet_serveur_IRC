@@ -7,19 +7,19 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(('127.0.0.1', 4321))
 
 # send nickname to server
-nickname = input("enter nickname : ")
-s.send(("/add_user "+nickname.strip()).encode())
+nickname = input("enter your nickname : ")
+s.send(("/set_nickname "+nickname.strip()).encode())
 
 
 def receive_message():
     while (True):
         data = s.recv(1024).decode()
-        print("msg reçu du serveur :", data)
+        print("=>", data)
 
 
 def send_message():
     while (True):
-        message = input("entrez une cmd : ")
+        message = input(">")
         s.send(message.encode())
         if message == "/exit":
             s.close()
