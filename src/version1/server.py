@@ -222,7 +222,7 @@ def receive_message(conn: socket.socket,
                     with nickname_lock:  # nickname
                         my_nickname = find_user_nickname_by_conx_id(
                             id=connexion_id, nickname_dict=nickname_map)
-                    print("-- channels_lock")
+
                     with channels_lock:
                         if channel not in channels_map:  # channel n'existe pas
                             # on le retire s'il existe dans d'autres channels
@@ -242,6 +242,7 @@ def receive_message(conn: socket.socket,
                         # si channel existe, on vérifie la clé
                         # si elle correspond on ajoute le user, on le retire aussi des autres channels #
                         else:
+                            print()
                             if cle == channels_keys.get(channel):
                                 # on le retire s'il existe dans d'autres channels
                                 my_channel_name = find_user_channel(
@@ -250,9 +251,16 @@ def receive_message(conn: socket.socket,
                                     channels_map.get(my_channel_name).remove(
                                         my_nickname)
 
+                                with nickname_lock:  # nickname
+                                    my_nickname = find_user_nickname_by_conx_id(
+                                        id=connexion_id,
+                                        nickname_dict=nickname_map)
                                 # on l'ajoute dans tous les cas au channel
-                                channels_map[channel] = channels_map.get(
-                                    channel).append(my_nickname)
+                                channels_map[channel].append(my_nickname)
+                                print("channels_map.get(channel)=",
+                                      channels_map.get(channel))
+                                print("-- channel=", channel,
+                                      "my_nickname=", my_nickname)
 
                             elif verbose:
                                 print(f"invalid key for channel {channel}")
@@ -277,10 +285,10 @@ def receive_message(conn: socket.socket,
 
         if cmd == CMD.AWAY.value:
             # Signale son absence quand on nous envoie un message en privé
-            def away_msg(splited_data: List[str]):
+            def away_msg(splited_data: List[str], join_char=" "):
                 # à voir si on renvoi une response à cette commande
                 if len(splited_data) > 1:
-                    msg = splited_data[1]
+                    msg = " ".join(splited_data[1:])
                     with nickname_lock:
                         my_nickname = find_user_nickname_by_conx_id(
                             id=connexion_id, nickname_dict=nickname_map)
@@ -288,13 +296,13 @@ def receive_message(conn: socket.socket,
                         away_messages[my_nickname] = msg
                     if verbose:
                         print(
-                            f"away message {msg} added to user {my_nickname}")
+                            f"away message ''{msg}'' added to user {my_nickname}")
 
             threading.Thread(target=away_msg,
-                             args=(split_data)).start()
+                             args=(split_data, " ")).start()
 
         if cmd == CMD.MSG.value:
-            def msg_canal_or_nick(split_data: List[str]):
+            def msg_canal_or_nick(split_data: List[str], debug=""):
                 """"
                 /msg [canal|nick] message Pour envoyer un message à un user
                 ou sur un canal (où on est pr esent ou pas).
@@ -340,7 +348,7 @@ def receive_message(conn: socket.socket,
                                 print(f"msg envoyé au user {nickname}")
 
             threading.Thread(target=msg_canal_or_nick,
-                             args=(split_data)).start()
+                             args=(split_data, "")).start()
 
 
 def accept_connexions(max_connexions: int = 10):
@@ -363,9 +371,6 @@ def accept_connexions(max_connexions: int = 10):
 thread_connex = threading.Thread(target=accept_connexions)
 thread_connex.start()
 print("-- server started --\n")
-
-# thread_recv.join()
-# thread_send.join()
 
 # conn.close()
 

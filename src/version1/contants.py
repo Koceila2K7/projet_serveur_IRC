@@ -1,23 +1,23 @@
 from enum import Enum
 
 HELP_MSG = """
-/away [message] Signale son absence quand on nous envoie un message en priv´e
-(en r´eponse un message peut ˆetre envoy´e).
-Une nouvelle commande /away r´eactive l’utilisateur.
+/away [message] Signale son absence quand on nous envoie un message en privé
+(en réponse un message peut etre envoye).
+Une nouvelle commande /away reactive l’utilisateur.
 
 /help Affiche la liste des commandes disponibles
 
 /invite <nick> Invite un utilisateur sur le canal o`u on se trouve
 
-/join <canal> [cl´e] Permet de rejoindre un canal (prot´eg´e ´eventuellement par une cl´e).
-Le canal est cr´e´e s’il n’existe pas.
+/join <canal> [cle] Permet de rejoindre un canal (protege eventuellement par une cle).
+Le canal est cree s’il n’existe pas.
 
 /list Affiche la liste des canaux sur IRC
 
 /msg [canal|nick] message Pour envoyer un message `a un utilisateur ou sur un canal (o`u on est
-pr´esent ou pas). Les arguments canal ou nick sont optionnels.
+present ou pas). Les arguments canal ou nick sont optionnels.
 
-/names [channel] Affiche les utilisateurs connect´es `a un canal. Si le canal n’est pas sp´ecifi´e,
+/names [channel] Affiche les utilisateurs connectes a un canal. Si le canal n’est pas specifie,
 affiche tous les utilisateurs de tous les canaux.
 """
 
