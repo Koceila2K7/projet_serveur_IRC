@@ -14,13 +14,13 @@ const FeatureList = [
     title: "Implémentation en mode client serveur",
     png: require("@site/static/img/socket.png").default,
     description: (
-      <>Nous avons implémenter deux version dont une client-serveur</>
+      <>Nous avons implémenté deux version dont une client-serveur</>
     ),
   },
   {
     title: "Mise en place d'un réseau Pair-à-pair",
     png: require("@site/static/img/peer_to_peer.png").default,
-    description: <>Nous avons implémenter une version P2P du projet</>,
+    description: <>Nous avons implémenté une version P2P du projet</>,
   },
 ];
 
