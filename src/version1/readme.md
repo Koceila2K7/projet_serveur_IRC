@@ -28,7 +28,7 @@ Un utilisateur peut joindre pleusieurs groupes.
 /invite <nick>
 ```
 
-Permet t'ajouter un user au dernier groupe **actif** de l'utilisateur courant.
+Permet t'ajouter un user au dernier groupe **actif**  de l'utilisateur courant.
 
 ### Liste des utilisateur du chanel :
 
