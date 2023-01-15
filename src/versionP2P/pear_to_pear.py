@@ -1,7 +1,7 @@
 from distutils.util import change_root
 import socket
 import threading
-import time
+import sys
 from contants import CMD, HELP_MSG
 from typing import List, Dict
 
@@ -30,15 +30,19 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 IP_ADDRESS = '127.0.0.1'
 PORT_NUM = 4321
 
-# try to connect to another node
-first_node: bool = None
-try:
-    s.connect((IP_ADDRESS, PORT_NUM))
-    first_node = False
-except ConnectionRefusedError:
-    first_node = True
-    print("-- first node to be started --")
 
+# Lire une varibale dans les arguements de lancement.
+# si l'argument n'existe pas ou est != de 1 donc ce n'est pas le client de fondation
+# Dans le cas ou arg1 = 1 dans c'est le noed de fondation
+
+# try to connect to another node
+args = sys.argv
+first_node: bool = len(args) > 1 and args[1] == "1"
+
+if first_node:
+    print("-- first node to be started --")
+else:
+    s.connect((IP_ADDRESS, PORT_NUM))
 
 _nickname = input("enter your nickname : ")
 
