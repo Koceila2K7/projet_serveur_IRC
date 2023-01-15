@@ -2,9 +2,10 @@ from distutils.util import change_root
 import socket
 import threading
 import sys
-from contants import CMD, HELP_MSG
+from contants import CMD, HELP_MSG, MESSAGE_TYPES, est_ce_que_j_ai_signer_ce_message
 from typing import List, Dict
-
+import uuid
+import json
 voisins: Dict = {}  # {id:nickname, id:nickname}
 # or  {(nickname, id), (nickname, id), ...} ???
 
@@ -39,6 +40,10 @@ PORT_NUM = 4321
 args = sys.argv
 first_node: bool = len(args) > 1 and args[1] == "1"
 
+
+MY_KEY_NAME = str(uuid.uuid4())
+MY_SIGNATURE_KEY = str(uuid.uuid4())
+
 if first_node:
     print("-- first node to be started --")
 else:
@@ -54,7 +59,29 @@ if first_node:
 # a modifier : demander au first_node ses voisins pour se connecter à l'un d'eux ?
 # mais il faut donc se déconnecter du first node
 else:
-    s.send(("/set_nickname "+_nickname.strip()).encode())
+    message_id = str(uuid.uuid4())
+
+    message = {"type": MESSAGE_TYPES.VOISINS.value,
+               "message_id": message_id,
+               "id_exp": MY_KEY_NAME,
+               "list_empreinte": [MY_SIGNATURE_KEY]}
+
+    s.send(json.dumps(message).encode())
+    # attente de la réponse du serveur de fondation
+    # implémentation naive
+    voisins = []
+    while True:
+        response = s.recv(1024)
+        response = json.loads(response)
+        if response['id_rec'] == MY_KEY_NAME\
+                and est_ce_que_j_ai_signer_ce_message(MY_SIGNATURE_KEY,
+                                                      response)\
+                and response['type'] == MESSAGE_TYPES.VOISINS_RESPONSE.value:
+            voisins = response['payload']
+            break
+
+    # il faut attendre la réponse du serveur de fondation.
+    s.send()
 
 
 ######################

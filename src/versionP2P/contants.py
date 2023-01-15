@@ -10,16 +10,20 @@ Une nouvelle commande /away reactive l’utilisateur.
 
 /invite <nick> Invite un utilisateur sur le canal ou on se trouve
 
-/join <canal> [cle] Permet de rejoindre un canal (protege eventuellement par une cle).
+/join <canal> [cle] Permet de rejoindre un canal (protege eventuellement par 
+une cle).
 Le canal est cree s’il n’existe pas.
 
 /list Affiche la liste des canaux sur IRC
 
-/msg [canal|nick] : message Pour envoyer un message a un utilisateur ou sur un canal (ou on est
-present ou pas). Ne pas oublier de mettre les ":" pour marquer le début du message.
+/msg [canal|nick] : message Pour envoyer un message a un utilisateur ou sur un\
+     canal (ou on est
+present ou pas). Ne pas oublier de mettre les ":" pour marquer le début du \
+    message.
 Les arguments canal ou nick sont optionnels.
 
-/names [channel] Affiche les utilisateurs connectes a un canal. Si le canal n’est pas specifie,
+/names [channel] Affiche les utilisateurs connectes a un canal. Si le canal\
+     n’est pas specifie,
 affiche tous les utilisateurs de tous les canaux.
 
 """
@@ -35,6 +39,16 @@ class CMD(Enum):
     NAMES = "/names"
 
 
+class MESSAGE_TYPES(Enum):
+    """
+    Les types de messages
+    """
+    MESSAGE_CLIENT_TO_CLIENT = 'msg_ctc'
+    NAMES = "names"
+    VOISINS = "voisins"
+    VOISINS_RESPONSE = "voisins_response"
+
+
 LIST_EMPREINTE_KEY = 'list_empreinte'
 
 
@@ -46,3 +60,10 @@ def signer_un_message(uuid: str, message: dict) -> dict:
     new_message = copy.deepcopy(message)
     new_message.get(LIST_EMPREINTE_KEY).append(uuid)
     return new_message
+
+
+def est_ce_que_j_ai_signer_ce_message(uuid: str, message: dict) -> bool:
+    """
+    Cette méthode premet de voir si on déja signer ce message
+    """
+    return uuid in message.get(LIST_EMPREINTE_KEY)

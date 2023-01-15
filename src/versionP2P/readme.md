@@ -14,7 +14,7 @@ Ceci permet d'éviter les cycle de broadcast.
     "type":"MESSAGE_CLIENT_TO_CLIENT | BROAD_CAST ....",
     "ID_EXP":"",
     "SELON LE TYPE on ajoutera les champs":""
-    "LIST_EMPREINTE":[], // Pour des raisons de simplicité on utilisera str(uuid.uuid4()) pour générer les empreintes.
+    "list_empreinte":[], // Pour des raisons de simplicité on utilisera str(uuid.uuid4()) pour générer les empreintes.
 }
 
 ```
