@@ -6,7 +6,7 @@ sidebar_position: 2
 
 ## Intro
 
-Dans cette version, nous avons implémenté les fonctionnalités demmandées, ou des clients se connectent aux serveurs, ou il peuvent lancer des commandes comme (/names, /msg ....)
+Dans cette version, nous avons implémenté les fonctionnalités demmandées, où des clients se connectent aux serveurs, ou ils peuvent lancer des commandes comme (/names, /msg ....)
 
 cette version peut être lancée en deux mode :
 
