@@ -1,4 +1,5 @@
 from enum import Enum
+import copy
 
 HELP_MSG = """
 /away [message] Signale son absence quand on nous envoie un message en privé
@@ -32,3 +33,16 @@ class CMD(Enum):
     LIST = "/list"
     MSG = "/msg"
     NAMES = "/names"
+
+
+LIST_EMPREINTE_KEY = 'list_empreinte'
+
+
+def signer_un_message(uuid: str, message: dict) -> dict:
+    """
+    Cette méthode permet de signer un message avec notre UUID
+    Aucun effet de bord (le message initial est copier[deep_copie])
+    """
+    new_message = copy.deepcopy(message)
+    new_message.get(LIST_EMPREINTE_KEY).append(uuid)
+    return new_message
