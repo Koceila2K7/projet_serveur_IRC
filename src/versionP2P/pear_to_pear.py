@@ -9,23 +9,53 @@ import uuid
 import json
 import random
 
-voisins: Dict = {}  # {id:nickname, id:nickname}
+class Connex:
+    """
+    class qui décrit une connexion 
+    """
+
+    def __init__(self, conn: socket.socket, addr: tuple):
+        self.conn = conn
+        self.addr = addr  # ('127.0.0.1', 35260)
+        self.id = addr[0] + ':' + str(addr[1])  # 127.0.0.1:35260
+        self.thread_recv = threading.Thread(target=receive_message,
+                                            args=(self.conn, self.id,
+                                                  1024, True))
+        self.thread_recv.start()
+
+
+def accept_connexions(s: socket.socket):
+    """
+    fonction principale du serveur pour gérer toute nouvelle connexion
+    """
+    while (True):
+        conn, addr = s.accept()  # attendre des connexions sur une prise
+        # Un appel a cette methode bloque le programme en attendant qu’un
+        #  client se connecte a la prise
+        c = Connex(conn, addr)
+        connex_map[c.id] = c  # a verifier
+        print("connexion de ", c.id)
+
+        
+#voisins: Dict = {}  # {KEY_NAME: id} # nickname_map
 # or  {(nickname, id), (nickname, id), ...} ???
 
 connex_map = {}  # {id: Connex, id: Connex, ...}
 connex_lock = threading.Lock()
 
-nickname_map = {}  # {nickname: id, ...}
-nickname_lock = threading.Lock()
+#nickname_map = {}  # {nickname: id, ...} # nickname_map des voisins !
+#nickname_lock = threading.Lock()
 
-channels_map: Dict[str, list] = {}  # {chan_id: [nickname, nickname...], ...}
-channels_lock = threading.RLock()
+#channels_map: Dict[str, list] = {}  # {chan_id: [nickname, nickname...], ...}
+#channels_lock = threading.RLock()
 
-channels_keys: Dict[str, str] = {}  # {chan_id: key, ...}
+#channels_keys: Dict[str, str] = {}  # {chan_id: key, ...}
 # if channel dont have key or dont exist, channels_keys.get(channel) returns None
 
 away_messages = {}  # {nickname: msg, nickname: msg,...}
 away_messages_lock = threading.Lock()
+
+_my_listening_socket = socket.socket()
 
 # ipv4 AF_INET
 # a SOCK STREAM (pour un mode connecte, soit ´ TCP) ou
@@ -44,24 +74,17 @@ args = sys.argv
 first_node: bool = len(args) > 1 and args[1] == "1"
 
 
-MY_KEY_NAME = str(uuid.uuid4())
+MY_KEY_NAME = str(uuid.uuid4()) # nickname
 MY_SIGNATURE_KEY = str(uuid.uuid4())
-
-if first_node:
-    print("-- first node to be started --")
-else:
-    s.connect((IP_ADDRESS, PORT_NUM))
-
 
 if first_node:
     s.bind((IP_ADDRESS, PORT_NUM))
     s.listen()  # ??? reproduire les thread ouvrir une prise
-
-# a modifier : demander au first_node ses voisins pour se connecter à l'un d'eux ?
-# mais il faut donc se déconnecter du first node
+    print("-- first node to be started --")
 else:
+    s.connect((IP_ADDRESS, PORT_NUM))
     message_id = str(uuid.uuid4())
-
+    # demander au first_node ses voisins pour se connecter à l'un d'eux 
     message = {"type": MESSAGE_TYPES.VOISINS.value,
                "message_id": message_id,
                "id_exp": MY_KEY_NAME,
@@ -71,7 +94,7 @@ else:
     s.send(json.dumps(message).encode())
     # attente de la réponse du serveur de fondation
     # implémentation naive
-    voisins = []
+    voisins_of_first_node = []
     while True:
         response = s.recv(1024)
 
@@ -84,22 +107,49 @@ else:
                 and est_ce_que_j_ai_signer_ce_message(MY_SIGNATURE_KEY,
                                                       response)\
                 and response['type'] == MESSAGE_TYPES.VOISINS_RESPONSE.value:
-            voisins = response['payload']
-
-            if len(voisins) > NB_MIN_DE_VOISINS:  # pour éviter de se retrouver seul sans amis
-                s.close()  # fermer la connection avec le serveur de fondation
+            voisins_of_first_node = response['payload']
             break
+        
+    # dans ce cas je vais me connecter aux autres
+    if len(voisins_of_first_node) > NB_MIN_DE_VOISINS:  # pour éviter de se retrouver seul sans amis
+        # j'ai bien reçu les voisins du first_node
+        s.close()  # fermer la connection avec le serveur de fondation
+        # je vais en choisir NB_MIN_DE_VOISINS aléatoirement et me connecter dessus
+        random.shuffle(voisins_of_first_node)
+        for v in voisins_of_first_node[:NB_MIN_DE_VOISINS]:  # création des connexion
+            s_voisin = socket.socket()
+            s_voisin.connect()
+            obj_conx_voisin = Connex(s_voisin, (str(v[0]), int(v[1]))) # la création de la classe lance un thread d'écoute de msgs
+            connex_map[obj_conx_voisin.id] = obj_conx_voisin # je garde mes connexions
+            #nickname_map[] # on ne gère pas les nicknames pour le moment
+    
+    else: # je reste connecté que au noeud principal donc je le garde comme voisin
+        obj_conx_voisin = Connex(s, (IP_ADDRESS, PORT_NUM)) # la création de la classe lance un thread d'écoute de msgs
+        connex_map[obj_conx_voisin.id] = obj_conx_voisin # je garde mes connexions
+    
+    # je vais aussi utiliser my_listening_socket pour écouter les nouvelles connexions
+    thread_connex = threading.Thread(target=accept_connexions, args=(_my_listening_socket,))
+    thread_connex.start()
+    print("-- my_listening_socket started --\n")
 
 
-if len(voisins) > NB_MIN_DE_VOISINS:
-    s = socket.socket()
-    s.bind(('', 0))
-    voisins.append([IP_ADDRESS, PORT_NUM])
-    random.shuffle(voisins)
-    for v in voisins[:NB_MIN_DE_VOISINS]:  # création des connexion
-        s.connect()
+# receive message function :
+# est ce que j'ai signé le msg ? si oui je ne fais rien sinon je le traite
+# est ce que je suis le destinataire ? si oui je le traite sinon je le broadcast à mes voisins
 
-        ######################
+
+# first_node code
+if first_node:
+    voisins_to_send = []
+    if len(connex_map) > NB_MIN_DE_VOISINS: # j'envoi une liste
+        pass
+    
+    else : # j'envoi que mon adresse
+        voisins_to_send.append([IP_ADDRESS, PORT_NUM]) # ?
+    
+    # envoyer un message de type voisins contenant les voisins_to_send ?        
+        
+######################
 
 
 def receive_message(conn: socket.socket,
@@ -111,36 +161,3 @@ def receive_message(conn: socket.socket,
     Fonction qui va gérer les messages pour chaque connexion
     """
     pass
-
-
-class Connex:
-    """
-    class qui décrit une connexion 
-    """
-
-    def __init__(self, conn: socket.socket, addr: tuple):
-        self.conn = conn
-        self.addr = addr  # ('127.0.0.1', 35260)
-        self.id = addr[0] + ':' + str(addr[1])  # 127.0.0.1:35260
-        self.thread_recv = threading.Thread(target=receive_message,
-                                            args=(self.conn, self.id,
-                                                  1024, True))
-        self.thread_recv.start()
-
-
-def accept_connexions():
-    """
-    fonction principale du serveur pour gérer toute nouvelle connexion
-    """
-    while (True):
-        conn, addr = s.accept()  # attendre des connexions sur une prise
-        # Un appel a cette methode bloque le programme en attendant qu’un
-        #  client se connecte a la prise
-        c = Connex(conn, addr)
-        connex_map[c.id] = c  # a verifier
-
-        # p2p
-        nickname = None  # to be sent soon ! using set_nicknanme ????????????????????????
-        voisins.add[c.id] = nickname  # ?
-
-        print("connexion de ", c.id)

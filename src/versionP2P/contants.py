@@ -69,3 +69,5 @@ def est_ce_que_j_ai_signer_ce_message(uuid: str, message: dict) -> bool:
     Cette méthode premet de voir si on déja signer ce message
     """
     return uuid in message.get(LIST_EMPREINTE_KEY)
+
+
