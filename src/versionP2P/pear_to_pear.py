@@ -2,10 +2,13 @@ from distutils.util import change_root
 import socket
 import threading
 import sys
-from contants import CMD, HELP_MSG, MESSAGE_TYPES, est_ce_que_j_ai_signer_ce_message
+from contants import CMD, HELP_MSG, MESSAGE_TYPES,\
+    est_ce_que_j_ai_signer_ce_message, NB_MIN_DE_VOISINS
 from typing import List, Dict
 import uuid
 import json
+import random
+
 voisins: Dict = {}  # {id:nickname, id:nickname}
 # or  {(nickname, id), (nickname, id), ...} ???
 
@@ -49,12 +52,10 @@ if first_node:
 else:
     s.connect((IP_ADDRESS, PORT_NUM))
 
-_nickname = input("enter your nickname : ")
-
 
 if first_node:
     s.bind((IP_ADDRESS, PORT_NUM))
-    s.listen()  # ouvrir une prise
+    s.listen()  # ??? reproduire les thread ouvrir une prise
 
 # a modifier : demander au first_node ses voisins pour se connecter à l'un d'eux ?
 # mais il faut donc se déconnecter du first node
@@ -64,6 +65,7 @@ else:
     message = {"type": MESSAGE_TYPES.VOISINS.value,
                "message_id": message_id,
                "id_exp": MY_KEY_NAME,
+               "payload": "",
                "list_empreinte": [MY_SIGNATURE_KEY]}
 
     s.send(json.dumps(message).encode())
@@ -72,19 +74,34 @@ else:
     voisins = []
     while True:
         response = s.recv(1024)
-        response = json.loads(response)
+
+        if not response:
+            print("Connexion coupée")
+            exit(1)
+
+        response = json.loads(response.decode())
         if response['id_rec'] == MY_KEY_NAME\
                 and est_ce_que_j_ai_signer_ce_message(MY_SIGNATURE_KEY,
                                                       response)\
                 and response['type'] == MESSAGE_TYPES.VOISINS_RESPONSE.value:
             voisins = response['payload']
+
+            if len(voisins) > NB_MIN_DE_VOISINS:  # pour éviter de se retrouver seul sans amis
+                s.close()  # fermer la connection avec le serveur de fondation
             break
 
-    # il faut attendre la réponse du serveur de fondation.
-    s.send()
+
+if len(voisins) > NB_MIN_DE_VOISINS:
+    s = socket.socket()
+    s.bind(('', 0))
+    voisins.append([IP_ADDRESS, PORT_NUM])
+    random.shuffle(voisins)
+    for v in voisins[:NB_MIN_DE_VOISINS]:  # création des connexion
+        s.connect()
+
+        ######################
 
 
-######################
 def receive_message(conn: socket.socket,
                     connexion_id: str,
                     msg_size: int = 1024,

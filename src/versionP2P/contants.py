@@ -51,6 +51,8 @@ class MESSAGE_TYPES(Enum):
 
 LIST_EMPREINTE_KEY = 'list_empreinte'
 
+NB_MIN_DE_VOISINS = 3
+
 
 def signer_un_message(uuid: str, message: dict) -> dict:
     """

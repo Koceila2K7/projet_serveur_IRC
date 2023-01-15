@@ -15,6 +15,7 @@ Ceci permet d'éviter les cycle de broadcast.
     "ID_EXP":"",
     "SELON LE TYPE on ajoutera les champs":""
     "list_empreinte":[], // Pour des raisons de simplicité on utilisera str(uuid.uuid4()) pour générer les empreintes.
+    "payload":""#tout dépend du type
 }
 
 ```
